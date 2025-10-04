@@ -6,20 +6,30 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import com.gridnine.testing.models.Flight;
+import com.gridnine.testing.models.Segment;
 
 public class GroundTimeMoreThanTwoHoursFilter implements FlightFilter {
-    private static final Duration MAX_GROUND_TIME = Duration.ofHours(2);
+    private static final Duration MAX_TOTAL_GROUND_TIME = Duration.ofHours(2);
 
     @Override
     public List<Flight> filter(List<Flight> flights) {
         return flights.stream()
-            .filter(flight ->
-                IntStream.range(0, flight.getSegments().size() - 1)
-                    .noneMatch(i -> Duration.between(
-                        flight.getSegments().get(i).getArrivalDate(),
-                        flight.getSegments().get(i + 1).getDepartureDate()
-                    ).compareTo(MAX_GROUND_TIME) > 0)
-            )
+            .filter(flight -> {
+                List<Segment> segments = flight.getSegments();
+                Duration totalGroundTime = Duration.ZERO;
+
+                for (int i = 0; i < segments.size() - 1; i++) {
+                    Duration groundTime = Duration.between(
+                        segments.get(i).getArrivalDate(),
+                        segments.get(i + 1).getDepartureDate());
+                    totalGroundTime = totalGroundTime.plus(groundTime);
+
+                    if (totalGroundTime.compareTo(MAX_TOTAL_GROUND_TIME) > 0) {
+                        return false;
+                    }
+                }
+                return true;
+            })
             .collect(Collectors.toList());
     }
 }
